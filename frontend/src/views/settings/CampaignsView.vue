@@ -261,6 +261,9 @@ onMounted(async () => {
       campaign.delivered_count = payload.delivered_count
       campaign.read_count = payload.read_count
       campaign.failed_count = payload.failed_count
+      if (payload.status) {
+        campaign.status = payload.status
+      }
     }
   })
 })

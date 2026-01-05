@@ -776,6 +776,21 @@ func (a *App) processCampaign(campaignID uuid.UUID) {
 			"failed_count": failedCount,
 		})
 
+		// Broadcast stats update via WebSocket
+		if a.WSHub != nil {
+			a.WSHub.BroadcastToOrg(campaign.OrganizationID, websocket.WSMessage{
+				Type: websocket.TypeCampaignStatsUpdate,
+				Payload: map[string]interface{}{
+					"campaign_id":     campaignID.String(),
+					"status":          "processing",
+					"sent_count":      sentCount,
+					"delivered_count": 0,
+					"read_count":      0,
+					"failed_count":    failedCount,
+				},
+			})
+		}
+
 		// Small delay to avoid rate limiting (WhatsApp has rate limits)
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -788,6 +803,21 @@ func (a *App) processCampaign(campaignID uuid.UUID) {
 		"sent_count":   sentCount,
 		"failed_count": failedCount,
 	})
+
+	// Broadcast completion via WebSocket
+	if a.WSHub != nil {
+		a.WSHub.BroadcastToOrg(campaign.OrganizationID, websocket.WSMessage{
+			Type: websocket.TypeCampaignStatsUpdate,
+			Payload: map[string]interface{}{
+				"campaign_id":     campaignID.String(),
+				"status":          "completed",
+				"sent_count":      sentCount,
+				"delivered_count": 0,
+				"read_count":      0,
+				"failed_count":    failedCount,
+			},
+		})
+	}
 
 	a.Log.Info("Campaign completed", "campaign_id", campaignID, "sent", sentCount, "failed", failedCount)
 }
