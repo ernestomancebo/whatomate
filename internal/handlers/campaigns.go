@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shridarpatil/whatomate/internal/models"
+	"github.com/shridarpatil/whatomate/internal/websocket"
 	"github.com/shridarpatil/whatomate/pkg/whatsapp"
 	"github.com/valyala/fasthttp"
 	"github.com/zerodha/fastglue"
@@ -816,6 +817,24 @@ func (a *App) incrementCampaignStat(campaignID string, status string) {
 		Where("id = ?", campaignUUID).
 		Update(column, gorm.Expr(column+" + 1")).Error; err != nil {
 		a.Log.Error("Failed to increment campaign stat", "error", err, "campaign_id", campaignID, "column", column)
+		return
+	}
+
+	// Broadcast stats update via WebSocket
+	if a.WSHub != nil {
+		var campaign models.BulkMessageCampaign
+		if err := a.DB.Where("id = ?", campaignUUID).First(&campaign).Error; err == nil {
+			a.WSHub.BroadcastToOrg(campaign.OrganizationID, websocket.WSMessage{
+				Type: websocket.TypeCampaignStatsUpdate,
+				Payload: map[string]interface{}{
+					"campaign_id":     campaignID,
+					"sent_count":      campaign.SentCount,
+					"delivered_count": campaign.DeliveredCount,
+					"read_count":      campaign.ReadCount,
+					"failed_count":    campaign.FailedCount,
+				},
+			})
+		}
 	}
 }
 

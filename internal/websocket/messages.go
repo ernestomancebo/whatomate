@@ -21,6 +21,9 @@ const (
 	TypeAgentTransfer       = "agent_transfer"
 	TypeAgentTransferResume = "agent_transfer_resume"
 	TypeAgentTransferAssign = "agent_transfer_assign"
+
+	// Campaign types
+	TypeCampaignStatsUpdate = "campaign_stats_update"
 )
 
 // BroadcastMessage represents a message to be broadcast to clients

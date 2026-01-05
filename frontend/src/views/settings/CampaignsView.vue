@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -43,6 +43,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { campaignsService, templatesService, accountsService } from '@/services/api'
+import { wsService } from '@/services/websocket'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'vue-sonner'
 import {
@@ -242,12 +243,32 @@ const cancelDialogOpen = ref(false)
 const campaignToDelete = ref<Campaign | null>(null)
 const campaignToCancel = ref<Campaign | null>(null)
 
+// WebSocket subscription for real-time stats updates
+let unsubscribeCampaignStats: (() => void) | null = null
+
 onMounted(async () => {
   await Promise.all([
     fetchCampaigns(),
     fetchTemplates(),
     fetchAccounts()
   ])
+
+  // Subscribe to campaign stats updates
+  unsubscribeCampaignStats = wsService.onCampaignStatsUpdate((payload) => {
+    const campaign = campaigns.value.find(c => c.id === payload.campaign_id)
+    if (campaign) {
+      campaign.sent_count = payload.sent_count
+      campaign.delivered_count = payload.delivered_count
+      campaign.read_count = payload.read_count
+      campaign.failed_count = payload.failed_count
+    }
+  })
+})
+
+onUnmounted(() => {
+  if (unsubscribeCampaignStats) {
+    unsubscribeCampaignStats()
+  }
 })
 
 async function fetchCampaigns() {

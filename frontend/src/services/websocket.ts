@@ -54,6 +54,9 @@ const WS_TYPE_AGENT_TRANSFER_RESUME = 'agent_transfer_resume'
 const WS_TYPE_AGENT_TRANSFER_ASSIGN = 'agent_transfer_assign'
 const WS_TYPE_TRANSFER_ESCALATION = 'transfer_escalation'
 
+// Campaign types
+const WS_TYPE_CAMPAIGN_STATS_UPDATE = 'campaign_stats_update'
+
 interface WSMessage {
   type: string
   payload: any
@@ -67,6 +70,7 @@ class WebSocketService {
   private pingInterval: number | null = null
   private isConnected = false
   private hasConnectedBefore = false
+  private campaignStatsCallbacks: ((payload: any) => void)[] = []
 
   connect(token: string) {
     if (this.ws?.readyState === WebSocket.OPEN) {
@@ -160,6 +164,9 @@ class WebSocketService {
           break
         case WS_TYPE_PONG:
           // Pong received, connection is alive
+          break
+        case WS_TYPE_CAMPAIGN_STATS_UPDATE:
+          this.handleCampaignStatsUpdate(message.payload)
           break
         default:
           console.log('Unknown message type:', message.type)
@@ -372,6 +379,22 @@ class WebSocketService {
           onClick: () => router.push('/chatbot/transfers')
         }
       })
+    }
+  }
+
+  private handleCampaignStatsUpdate(payload: any) {
+    // Notify all registered callbacks
+    this.campaignStatsCallbacks.forEach(callback => callback(payload))
+  }
+
+  onCampaignStatsUpdate(callback: (payload: any) => void) {
+    this.campaignStatsCallbacks.push(callback)
+    // Return unsubscribe function
+    return () => {
+      const index = this.campaignStatsCallbacks.indexOf(callback)
+      if (index > -1) {
+        this.campaignStatsCallbacks.splice(index, 1)
+      }
     }
   }
 
