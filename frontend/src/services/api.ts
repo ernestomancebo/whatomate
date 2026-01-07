@@ -379,4 +379,59 @@ export const webhooksService = {
   test: (id: string) => api.post(`/webhooks/${id}/test`)
 }
 
+export interface CustomAction {
+  id: string
+  name: string
+  icon: string
+  action_type: 'webhook' | 'url' | 'javascript'
+  config: {
+    url?: string
+    method?: string
+    headers?: Record<string, string>
+    body?: string
+    open_in_new_tab?: boolean
+    code?: string
+  }
+  is_active: boolean
+  display_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ActionResult {
+  success: boolean
+  message?: string
+  redirect_url?: string
+  clipboard?: string
+  toast?: {
+    message: string
+    type: 'success' | 'error' | 'info' | 'warning'
+  }
+  data?: Record<string, any>
+}
+
+export const customActionsService = {
+  list: () => api.get<{ custom_actions: CustomAction[] }>('/custom-actions'),
+  get: (id: string) => api.get<CustomAction>(`/custom-actions/${id}`),
+  create: (data: {
+    name: string
+    icon?: string
+    action_type: 'webhook' | 'url' | 'javascript'
+    config: Record<string, any>
+    is_active?: boolean
+    display_order?: number
+  }) => api.post<CustomAction>('/custom-actions', data),
+  update: (id: string, data: {
+    name?: string
+    icon?: string
+    action_type?: 'webhook' | 'url' | 'javascript'
+    config?: Record<string, any>
+    is_active?: boolean
+    display_order?: number
+  }) => api.put<CustomAction>(`/custom-actions/${id}`, data),
+  delete: (id: string) => api.delete(`/custom-actions/${id}`),
+  execute: (id: string, contactId: string) =>
+    api.post<ActionResult>(`/custom-actions/${id}/execute`, { contact_id: contactId })
+}
+
 export default api

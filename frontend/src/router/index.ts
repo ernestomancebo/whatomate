@@ -175,6 +175,12 @@ const router = createRouter({
           name: 'sso-settings',
           component: () => import('@/views/settings/SSOSettingsView.vue'),
           meta: { roles: ['admin'] }
+        },
+        {
+          path: 'settings/custom-actions',
+          name: 'custom-actions',
+          component: () => import('@/views/settings/CustomActionsView.vue'),
+          meta: { roles: ['admin'] }
         }
       ]
     },

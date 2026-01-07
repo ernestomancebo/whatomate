@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useUsersStore } from '@/stores/users'
 import { useTransfersStore } from '@/stores/transfers'
 import { wsService } from '@/services/websocket'
-import { contactsService, chatbotService, messagesService } from '@/services/api'
+import { contactsService, chatbotService, messagesService, customActionsService, type CustomAction, type ActionResult } from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -67,7 +67,14 @@ import {
   SmilePlus,
   MapPin,
   ExternalLink,
-  Loader2
+  Loader2,
+  Zap,
+  Ticket,
+  BarChart,
+  Link,
+  Mail,
+  Globe,
+  Code
 } from 'lucide-vue-next'
 import { formatTime, getInitials, truncate } from '@/lib/utils'
 import { useColorMode } from '@/composables/useColorMode'
@@ -114,6 +121,10 @@ let stickyDateTimeout: ReturnType<typeof setTimeout> | null = null
 // Emoji picker state
 const emojiPickerOpen = ref(false)
 
+// Custom actions state
+const customActions = ref<CustomAction[]>([])
+const executingActionId = ref<string | null>(null)
+
 const contactId = computed(() => route.params.contactId as string | undefined)
 
 // Get active transfer for current contact from the store (reactive)
@@ -147,6 +158,103 @@ const assignableUsers = computed(() => {
   return usersStore.users.filter(u => u.is_active)
 })
 
+// Icon mapping for custom actions
+const actionIconMap: Record<string, any> = {
+  'ticket': Ticket,
+  'user': User,
+  'bar-chart': BarChart,
+  'link': Link,
+  'phone': Phone,
+  'mail': Mail,
+  'file-text': FileText,
+  'external-link': ExternalLink,
+  'zap': Zap,
+  'globe': Globe,
+  'code': Code
+}
+
+function getActionIcon(iconName: string) {
+  return actionIconMap[iconName] || Zap
+}
+
+async function fetchCustomActions() {
+  try {
+    const response = await customActionsService.list()
+    const data = response.data.data || response.data
+    customActions.value = (data.custom_actions || []).filter((a: CustomAction) => a.is_active)
+  } catch (error) {
+    // Silently fail - custom actions are optional
+    console.error('Failed to fetch custom actions:', error)
+  }
+}
+
+async function executeCustomAction(action: CustomAction) {
+  if (!contactsStore.currentContact || executingActionId.value) return
+
+  executingActionId.value = action.id
+  try {
+    const response = await customActionsService.execute(action.id, contactsStore.currentContact.id)
+    let result: ActionResult = response.data.data || response.data
+
+    // Handle JavaScript action - execute code in frontend
+    if (result.data?.code && result.data?.context) {
+      try {
+        // Create a function from the code and execute with context
+        const context = result.data.context
+        const code = result.data.code
+        // The code should return an object like: { toast: {...}, clipboard: '...', url: '...' }
+        const fn = new Function('context', 'contact', 'user', 'organization', code)
+        const jsResult = fn(context, context.contact, context.user, context.organization)
+
+        // Merge JS result into action result
+        if (jsResult) {
+          if (jsResult.toast) result.toast = jsResult.toast
+          if (jsResult.clipboard) result.clipboard = jsResult.clipboard
+          if (jsResult.url) result.redirect_url = jsResult.url
+          if (jsResult.message) result.message = jsResult.message
+        }
+      } catch (jsError: any) {
+        console.error('JavaScript action error:', jsError)
+        toast.error('JavaScript error: ' + jsError.message)
+        return
+      }
+    }
+
+    // Handle different result types
+    if (result.redirect_url) {
+      // Open URL action result
+      window.open(result.redirect_url, '_blank')
+    }
+
+    if (result.clipboard) {
+      // Copy to clipboard
+      await navigator.clipboard.writeText(result.clipboard)
+      toast.success('Copied to clipboard')
+    }
+
+    if (result.toast) {
+      // Show toast notification
+      if (result.toast.type === 'success') {
+        toast.success(result.toast.message)
+      } else if (result.toast.type === 'error') {
+        toast.error(result.toast.message)
+      } else {
+        toast.info(result.toast.message)
+      }
+    } else if (result.success && !result.redirect_url && !result.clipboard) {
+      // Default success message
+      toast.success(result.message || 'Action executed successfully')
+    } else if (!result.success) {
+      toast.error(result.message || 'Action failed')
+    }
+  } catch (error: any) {
+    const message = error.response?.data?.message || 'Failed to execute action'
+    toast.error(message)
+  } finally {
+    executingActionId.value = null
+  }
+}
+
 // Search state for assignment dialog
 const assignSearchQuery = ref('')
 
@@ -177,6 +285,11 @@ onMounted(async () => {
     usersStore.fetchUsers().catch(() => {
       // Silently fail if user list can't be loaded
     })
+  }
+
+  // Fetch custom actions for admins/managers
+  if (canAssignContacts.value) {
+    fetchCustomActions()
   }
 
   if (contactId.value) {
@@ -1092,6 +1205,22 @@ async function sendMediaMessage() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Resume Chatbot</TooltipContent>
+            </Tooltip>
+            <!-- Custom Action Buttons -->
+            <Tooltip v-for="action in customActions" :key="action.id">
+              <TooltipTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  class="h-8 w-8"
+                  :disabled="executingActionId === action.id"
+                  @click="executeCustomAction(action)"
+                >
+                  <Loader2 v-if="executingActionId === action.id" class="h-4 w-4 animate-spin" />
+                  <component v-else :is="getActionIcon(action.icon)" class="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{{ action.name }}</TooltipContent>
             </Tooltip>
             <DropdownMenu>
               <DropdownMenuTrigger as-child>

@@ -241,6 +241,25 @@ func (Webhook) TableName() string {
 	return "webhooks"
 }
 
+// CustomAction represents a custom action button for chat integrations
+type CustomAction struct {
+	BaseModel
+	OrganizationID uuid.UUID `gorm:"type:uuid;index;not null" json:"organization_id"`
+	Name           string    `gorm:"size:100;not null" json:"name"`
+	Icon           string    `gorm:"size:50" json:"icon"`                      // lucide icon name
+	ActionType     string    `gorm:"size:20;not null" json:"action_type"`      // webhook, url, javascript
+	Config         JSONB     `gorm:"type:jsonb;default:'{}'" json:"config"`    // Type-specific configuration
+	IsActive       bool      `gorm:"default:true" json:"is_active"`
+	DisplayOrder   int       `gorm:"default:0" json:"display_order"`
+
+	// Relations
+	Organization *Organization `gorm:"foreignKey:OrganizationID" json:"organization,omitempty"`
+}
+
+func (CustomAction) TableName() string {
+	return "custom_actions"
+}
+
 // WhatsAppAccount represents a WhatsApp Business Account
 type WhatsAppAccount struct {
 	BaseModel

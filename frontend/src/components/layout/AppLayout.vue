@@ -47,7 +47,8 @@ import {
   Monitor,
   Webhook,
   BarChart3,
-  ShieldCheck
+  ShieldCheck,
+  Zap
 } from 'lucide-vue-next'
 import { useColorMode } from '@/composables/useColorMode'
 import { toast } from 'vue-sonner'
@@ -258,6 +259,7 @@ const allNavItems = [
       { name: 'Users', path: '/settings/users', icon: Users, roles: ['admin'] },
       { name: 'API Keys', path: '/settings/api-keys', icon: Key, roles: ['admin'] },
       { name: 'Webhooks', path: '/settings/webhooks', icon: Webhook, roles: ['admin'] },
+      { name: 'Custom Actions', path: '/settings/custom-actions', icon: Zap, roles: ['admin'] },
       { name: 'SSO', path: '/settings/sso', icon: ShieldCheck, roles: ['admin'] }
     ]
   }

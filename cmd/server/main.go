@@ -478,6 +478,15 @@ func setupRoutes(g *fastglue.Fastglue, app *handlers.App, lo logf.Logger, basePa
 	g.DELETE("/api/webhooks/:id", app.DeleteWebhook)
 	g.POST("/api/webhooks/:id/test", app.TestWebhook)
 
+	// Custom Actions
+	g.GET("/api/custom-actions", app.ListCustomActions)
+	g.POST("/api/custom-actions", app.CreateCustomAction)
+	g.GET("/api/custom-actions/{id}", app.GetCustomAction)
+	g.PUT("/api/custom-actions/{id}", app.UpdateCustomAction)
+	g.DELETE("/api/custom-actions/{id}", app.DeleteCustomAction)
+	g.POST("/api/custom-actions/{id}/execute", app.ExecuteCustomAction)
+	g.GET("/api/custom-actions/redirect/{token}", app.CustomActionRedirect)
+
 	// Catalogs
 	g.GET("/api/catalogs", app.ListCatalogs)
 	g.POST("/api/catalogs", app.CreateCatalog)
