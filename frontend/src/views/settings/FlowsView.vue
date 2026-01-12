@@ -196,7 +196,7 @@ async function createFlow() {
     showCreateDialog.value = false
     await fetchFlows()
   } catch (error: any) {
-    const message = error.response?.data?.error || 'Failed to create flow'
+    const message = error.response?.data?.message || 'Failed to create flow'
     toast.error(message)
   } finally {
     isCreating.value = false
@@ -252,7 +252,7 @@ async function updateFlow() {
     flowToEdit.value = null
     await fetchFlows()
   } catch (error: any) {
-    const message = error.response?.data?.error || 'Failed to update flow'
+    const message = error.response?.data?.message || 'Failed to update flow'
     toast.error(message)
   } finally {
     isUpdating.value = false
@@ -266,7 +266,7 @@ async function saveFlowToMeta(flow: WhatsAppFlow) {
     toast.success('Flow saved to Meta successfully')
     await fetchFlows()
   } catch (error: any) {
-    const message = error.response?.data?.error || 'Failed to save flow to Meta'
+    const message = error.response?.data?.message || 'Failed to save flow to Meta'
     toast.error(message)
   } finally {
     savingToMetaFlowId.value = null
@@ -280,7 +280,7 @@ async function publishFlow(flow: WhatsAppFlow) {
     toast.success('Flow published successfully')
     await fetchFlows()
   } catch (error: any) {
-    const message = error.response?.data?.error || 'Failed to publish flow'
+    const message = error.response?.data?.message || 'Failed to publish flow'
     toast.error(message)
   } finally {
     publishingFlowId.value = null
@@ -302,7 +302,7 @@ async function confirmDeleteFlow() {
     flowToDelete.value = null
     await fetchFlows()
   } catch (error: any) {
-    const message = error.response?.data?.error || 'Failed to delete flow'
+    const message = error.response?.data?.message || 'Failed to delete flow'
     toast.error(message)
   }
 }
@@ -320,7 +320,7 @@ async function syncFlows() {
     toast.success(`Synced ${data.synced} flows (${data.created} new, ${data.updated} updated)`)
     await fetchFlows()
   } catch (error: any) {
-    const message = error.response?.data?.error || 'Failed to sync flows'
+    const message = error.response?.data?.message || 'Failed to sync flows'
     toast.error(message)
   } finally {
     isSyncing.value = false
