@@ -31,6 +31,7 @@ type ChatbotSettingsResponse struct {
 	AIModel               string                   `json:"ai_model"`
 	AIMaxTokens           int                      `json:"ai_max_tokens"`
 	AISystemPrompt        string                   `json:"ai_system_prompt"`
+	AIServerURL           string                   `json:"ai_server_url"`
 	// SLA Settings
 	SLAEnabled             bool     `json:"sla_enabled"`
 	SLAResponseMinutes     int      `json:"sla_response_minutes"`
@@ -170,6 +171,7 @@ func (a *App) GetChatbotSettings(r *fastglue.Request) error {
 		AIModel:        settings.AI.Model,
 		AIMaxTokens:    settings.AI.MaxTokens,
 		AISystemPrompt: settings.AI.SystemPrompt,
+		AIServerURL:    settings.AI.ServerURL,
 		// SLA Settings
 		SLAEnabled:             settings.SLA.Enabled,
 		SLAResponseMinutes:     settings.SLA.ResponseMinutes,
@@ -220,6 +222,7 @@ func (a *App) UpdateChatbotSettings(r *fastglue.Request) error {
 		AIModel                    *string                    `json:"ai_model"`
 		AIMaxTokens                *int                       `json:"ai_max_tokens"`
 		AISystemPrompt             *string                    `json:"ai_system_prompt"`
+		AIServerURL                *string                    `json:"ai_server_url"`
 		// SLA Settings
 		SLAEnabled             *bool     `json:"sla_enabled"`
 		SLAResponseMinutes     *int      `json:"sla_response_minutes"`
@@ -326,6 +329,9 @@ func (a *App) UpdateChatbotSettings(r *fastglue.Request) error {
 	}
 	if req.AISystemPrompt != nil {
 		settings.AI.SystemPrompt = *req.AISystemPrompt
+	}
+	if req.AIServerURL != nil {
+		settings.AI.ServerURL = *req.AIServerURL
 	}
 
 	// SLA Settings
