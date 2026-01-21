@@ -48,7 +48,7 @@ type OutgoingMessageRequest struct {
 
 	// Template messages
 	Template   *models.Template
-	BodyParams []string
+	BodyParams map[string]string // Parameter name -> value (supports both named and positional)
 
 	// WhatsApp Flow messages
 	FlowID          string // Meta Flow ID
@@ -608,7 +608,7 @@ func (a *App) SendTemplateMessage(r *fastglue.Request) error {
 		Contact:    contact,
 		Type:       models.MessageTypeTemplate,
 		Template:   &template,
-		BodyParams: bodyParams,
+		BodyParams: req.TemplateParams,
 	}
 
 	opts := DefaultSendOptions()
@@ -652,20 +652,25 @@ func ExtractParamNamesFromContent(content string) []string {
 	return names
 }
 
-// replaceTemplateParams replaces {{1}}, {{2}}, etc. placeholders with actual values
-func replaceTemplateParams(content string, params []string) string {
+// replaceTemplateParams replaces {{1}}, {{2}}, {{name}}, etc. placeholders with actual values
+func replaceTemplateParams(content string, params map[string]string) string {
 	if content == "" || len(params) == 0 {
 		return content
 	}
 
 	result := content
-	// Extract param names from content to replace both named and positional
+	// Extract param names from content to replace placeholders
 	paramNames := ExtractParamNamesFromContent(content)
 	for i, name := range paramNames {
-		if i < len(params) {
-			// Replace both named ({{name}}) and positional ({{1}}) placeholders
-			result = strings.ReplaceAll(result, fmt.Sprintf("{{%s}}", name), params[i])
-			result = strings.ReplaceAll(result, fmt.Sprintf("{{%d}}", i+1), params[i])
+		// Try to get value by name first (works for both named and positional)
+		if val, ok := params[name]; ok {
+			result = strings.ReplaceAll(result, fmt.Sprintf("{{%s}}", name), val)
+			continue
+		}
+		// Fall back to positional key (1-indexed)
+		key := fmt.Sprintf("%d", i+1)
+		if val, ok := params[key]; ok {
+			result = strings.ReplaceAll(result, fmt.Sprintf("{{%s}}", name), val)
 		}
 	}
 	return result

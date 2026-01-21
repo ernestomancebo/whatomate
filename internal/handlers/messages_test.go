@@ -601,7 +601,7 @@ func TestApp_SendOutgoingMessage_TemplateMessage(t *testing.T) {
 		Contact:    contact,
 		Type:       models.MessageTypeTemplate,
 		Template:   template,
-		BodyParams: []string{"John", "ORD-123"},
+		BodyParams: map[string]string{"1": "John", "2": "ORD-123"},
 	}
 
 	opts := handlers.ChatbotSendOptions()
@@ -645,7 +645,7 @@ func TestApp_SendOutgoingMessage_TemplateMessage_MissingTemplate(t *testing.T) {
 		Contact:    contact,
 		Type:       models.MessageTypeTemplate,
 		Template:   nil, // Missing template
-		BodyParams: []string{"param1"},
+		BodyParams: map[string]string{"1": "param1"},
 	}
 
 	opts := handlers.ChatbotSendOptions()
