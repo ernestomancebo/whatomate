@@ -351,7 +351,23 @@ function setupScrollListener() {
   // Get the viewport element from ScrollArea
   const scrollArea = messagesScrollAreaRef.value?.$el
   if (scrollArea) {
-    scrollViewport = scrollArea.querySelector('[data-radix-scroll-area-viewport]')
+    // Find the scrollable viewport - it's the element with overflow:scroll/auto
+    // Try data attributes first, then find by computed style
+    scrollViewport = scrollArea.querySelector('[data-reka-scroll-area-viewport]') ||
+                     scrollArea.querySelector('[data-radix-scroll-area-viewport]')
+
+    if (!scrollViewport) {
+      // Fallback: find child element that has overflow scroll/auto
+      const children = scrollArea.querySelectorAll('*')
+      for (const child of children) {
+        const style = window.getComputedStyle(child)
+        if (style.overflowY === 'scroll' || style.overflowY === 'auto') {
+          scrollViewport = child as HTMLElement
+          break
+        }
+      }
+    }
+
     if (scrollViewport) {
       scrollViewport.addEventListener('scroll', handleScroll)
     }
