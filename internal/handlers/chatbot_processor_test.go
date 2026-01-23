@@ -235,3 +235,73 @@ func TestGenerateRasaResponse_NoTextInResponse(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no text response from Rasa")
 }
+
+func TestGenerateRasaResponse_WithAuthToken(t *testing.T) {
+	var receivedAuthHeader string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedAuthHeader = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode([]map[string]interface{}{
+			{"recipient_id": "1234567890", "text": "Authenticated response"},
+		})
+	}))
+	defer server.Close()
+
+	app := processorTestAppMinimal(t)
+
+	settings := &models.ChatbotSettings{
+		AI: models.AIConfig{
+			Enabled:   true,
+			Provider:  models.AIProviderRasa,
+			ServerURL: server.URL,
+			APIKey:    "my-secret-token",
+		},
+	}
+
+	session := &models.ChatbotSession{
+		BaseModel:   models.BaseModel{ID: uuid.New()},
+		PhoneNumber: "1234567890",
+	}
+
+	response, err := handlers.GenerateRasaResponseForTest(app, settings, session, "Hello")
+	require.NoError(t, err)
+	assert.Equal(t, "Authenticated response", response)
+	assert.Equal(t, "Bearer my-secret-token", receivedAuthHeader)
+}
+
+func TestGenerateRasaResponse_NoAuthHeaderWhenNoKey(t *testing.T) {
+	var receivedAuthHeader string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedAuthHeader = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode([]map[string]interface{}{
+			{"recipient_id": "1234567890", "text": "No auth response"},
+		})
+	}))
+	defer server.Close()
+
+	app := processorTestAppMinimal(t)
+
+	settings := &models.ChatbotSettings{
+		AI: models.AIConfig{
+			Enabled:   true,
+			Provider:  models.AIProviderRasa,
+			ServerURL: server.URL,
+			APIKey:    "", // Empty key
+		},
+	}
+
+	session := &models.ChatbotSession{
+		BaseModel:   models.BaseModel{ID: uuid.New()},
+		PhoneNumber: "1234567890",
+	}
+
+	response, err := handlers.GenerateRasaResponseForTest(app, settings, session, "Hello")
+	require.NoError(t, err)
+	assert.Equal(t, "No auth response", response)
+	assert.Empty(t, receivedAuthHeader, "Should not send auth header when API key is empty")
+}
