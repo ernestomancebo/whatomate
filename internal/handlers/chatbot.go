@@ -334,6 +334,12 @@ func (a *App) UpdateChatbotSettings(r *fastglue.Request) error {
 		settings.AI.ServerURL = *req.AIServerURL
 	}
 
+	// For RASA provider, set a default API key if not provided
+	// This is required because the validation logic expects an API key to be present
+	if settings.AI.Provider == models.AIProviderRasa && settings.AI.APIKey == "" {
+		settings.AI.APIKey = "NO-KEY"
+	}
+
 	// SLA Settings
 	if req.SLAEnabled != nil {
 		settings.SLA.Enabled = *req.SLAEnabled
