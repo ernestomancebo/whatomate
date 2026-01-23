@@ -133,3 +133,105 @@ func TestGenerateRasaResponse_MultipleMessages(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "First response.\n\nSecond response.\n\nThird response.", response)
 }
+
+func TestGenerateRasaResponse_MissingServerURL(t *testing.T) {
+	app := processorTestAppMinimal(t)
+
+	settings := &models.ChatbotSettings{
+		AI: models.AIConfig{
+			Enabled:   true,
+			Provider:  models.AIProviderRasa,
+			ServerURL: "", // Missing URL
+			APIKey:    "NO-KEY",
+		},
+	}
+
+	session := &models.ChatbotSession{
+		BaseModel:   models.BaseModel{ID: uuid.New()},
+		PhoneNumber: "1234567890",
+	}
+
+	_, err := handlers.GenerateRasaResponseForTest(app, settings, session, "Hello")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "server URL is not configured")
+}
+
+func TestGenerateRasaResponse_ServerError(t *testing.T) {
+	mockRasa := newMockRasaServer(nil)
+	mockRasa.returnError = true
+	mockRasa.errorStatus = 500
+	mockRasa.errorMessage = "Internal Server Error"
+	defer mockRasa.close()
+
+	app := processorTestAppMinimal(t)
+
+	settings := &models.ChatbotSettings{
+		AI: models.AIConfig{
+			Enabled:   true,
+			Provider:  models.AIProviderRasa,
+			ServerURL: mockRasa.server.URL,
+			APIKey:    "NO-KEY",
+		},
+	}
+
+	session := &models.ChatbotSession{
+		BaseModel:   models.BaseModel{ID: uuid.New()},
+		PhoneNumber: "1234567890",
+	}
+
+	_, err := handlers.GenerateRasaResponseForTest(app, settings, session, "Hello")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Rasa API error (status 500)")
+}
+
+func TestGenerateRasaResponse_EmptyResponse(t *testing.T) {
+	mockRasa := newMockRasaServer([]map[string]interface{}{})
+	defer mockRasa.close()
+
+	app := processorTestAppMinimal(t)
+
+	settings := &models.ChatbotSettings{
+		AI: models.AIConfig{
+			Enabled:   true,
+			Provider:  models.AIProviderRasa,
+			ServerURL: mockRasa.server.URL,
+			APIKey:    "NO-KEY",
+		},
+	}
+
+	session := &models.ChatbotSession{
+		BaseModel:   models.BaseModel{ID: uuid.New()},
+		PhoneNumber: "1234567890",
+	}
+
+	_, err := handlers.GenerateRasaResponseForTest(app, settings, session, "Hello")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no response from Rasa")
+}
+
+func TestGenerateRasaResponse_NoTextInResponse(t *testing.T) {
+	mockRasa := newMockRasaServer([]map[string]interface{}{
+		{"recipient_id": "1234567890", "image": "http://example.com/image.png"},
+	})
+	defer mockRasa.close()
+
+	app := processorTestAppMinimal(t)
+
+	settings := &models.ChatbotSettings{
+		AI: models.AIConfig{
+			Enabled:   true,
+			Provider:  models.AIProviderRasa,
+			ServerURL: mockRasa.server.URL,
+			APIKey:    "NO-KEY",
+		},
+	}
+
+	session := &models.ChatbotSession{
+		BaseModel:   models.BaseModel{ID: uuid.New()},
+		PhoneNumber: "1234567890",
+	}
+
+	_, err := handlers.GenerateRasaResponseForTest(app, settings, session, "Hello")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no text response from Rasa")
+}
