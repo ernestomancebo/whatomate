@@ -103,3 +103,33 @@ func TestGenerateRasaResponse_Success(t *testing.T) {
 	assert.Equal(t, "1234567890", mockRasa.receivedReqs[0]["sender"])
 	assert.Equal(t, "Hi there!", mockRasa.receivedReqs[0]["message"])
 }
+
+func TestGenerateRasaResponse_MultipleMessages(t *testing.T) {
+	// Create mock Rasa server returning multiple messages
+	mockRasa := newMockRasaServer([]map[string]interface{}{
+		{"recipient_id": "1234567890", "text": "First response."},
+		{"recipient_id": "1234567890", "text": "Second response."},
+		{"recipient_id": "1234567890", "text": "Third response."},
+	})
+	defer mockRasa.close()
+
+	app := processorTestAppMinimal(t)
+
+	settings := &models.ChatbotSettings{
+		AI: models.AIConfig{
+			Enabled:   true,
+			Provider:  models.AIProviderRasa,
+			ServerURL: mockRasa.server.URL,
+			APIKey:    "NO-KEY",
+		},
+	}
+
+	session := &models.ChatbotSession{
+		BaseModel:   models.BaseModel{ID: uuid.New()},
+		PhoneNumber: "1234567890",
+	}
+
+	response, err := handlers.GenerateRasaResponseForTest(app, settings, session, "Tell me more")
+	require.NoError(t, err)
+	assert.Equal(t, "First response.\n\nSecond response.\n\nThird response.", response)
+}
