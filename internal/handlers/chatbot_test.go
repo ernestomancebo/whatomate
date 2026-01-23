@@ -87,3 +87,37 @@ func TestUpdateChatbotSettings_RasaProvider_SetsDefaultAPIKey(t *testing.T) {
 	assert.Equal(t, "http://localhost:5005/webhooks/rest/webhook", settings.AI.ServerURL)
 	assert.True(t, settings.AI.Enabled)
 }
+
+func TestUpdateChatbotSettings_RasaProvider_PreservesExplicitAPIKey(t *testing.T) {
+	app := chatbotTestApp(t)
+	org := createChatbotTestOrg(t, app)
+
+	// Create request with RASA provider AND explicit API key
+	reqBody := map[string]interface{}{
+		"ai_enabled":    true,
+		"ai_provider":   "rasa",
+		"ai_api_key":    "my-custom-rasa-token",
+		"ai_server_url": "http://localhost:5005/webhooks/rest/webhook",
+	}
+	jsonBody, err := json.Marshal(reqBody)
+	require.NoError(t, err)
+
+	ctx := &fasthttp.RequestCtx{}
+	ctx.Request.Header.SetContentType("application/json")
+	ctx.Request.Header.SetMethod("POST")
+	ctx.Request.SetBody(jsonBody)
+	ctx.SetUserValue("organization_id", org.ID)
+
+	req := &fastglue.Request{RequestCtx: ctx}
+
+	err = app.UpdateChatbotSettings(req)
+	require.NoError(t, err)
+
+	// Verify explicit API key was preserved
+	var settings models.ChatbotSettings
+	err = app.DB.Where("organization_id = ?", org.ID).First(&settings).Error
+	require.NoError(t, err)
+
+	assert.Equal(t, models.AIProviderRasa, settings.AI.Provider)
+	assert.Equal(t, "my-custom-rasa-token", settings.AI.APIKey, "Explicit API key should be preserved")
+}
